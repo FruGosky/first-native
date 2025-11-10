@@ -1,6 +1,6 @@
 import { Text, View } from 'react-native';
 
-export default function ProfileScreen() {
+export default function StreaksScreen() {
   return (
     <View
       style={{
@@ -9,7 +9,7 @@ export default function ProfileScreen() {
         alignItems: 'center',
       }}
     >
-      <Text>Edit app/profile.tsx to edit this screen.</Text>
+      <Text>Edit streaks.tsx to edit this screen.</Text>
     </View>
   );
 }
