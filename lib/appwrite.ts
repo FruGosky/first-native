@@ -1,5 +1,5 @@
-import { Account, Client } from 'react-native-appwrite';
 import { env } from '@/env';
+import { Account, Client } from 'react-native-appwrite';
 
 export const client = new Client()
   .setEndpoint(env.EXPO_PUBLIC_APPWRITE_API_ENDPOINT)

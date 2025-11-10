@@ -1,9 +1,9 @@
-import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
-import { Button, Text, TextInput } from 'react-native-paper';
-import { useState } from 'react';
+import { TextError } from '@/components/text-error';
 import { useAuth } from '@/lib/auth-context';
 import { useRouter } from 'expo-router';
-import { TextError } from '@/components/text-error';
+import { useState } from 'react';
+import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
+import { Button, Text, TextInput } from 'react-native-paper';
 
 export default function AuthScreen() {
   const { login, registerAndLogin } = useAuth();

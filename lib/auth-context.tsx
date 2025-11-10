@@ -1,7 +1,7 @@
+import { getErrorMessage } from '@/helpers/getErrorMessage';
+import { account } from '@/lib/appwrite';
 import { createContext, PropsWithChildren, useContext, useEffect, useState } from 'react';
 import { ID, Models } from 'react-native-appwrite';
-import { account } from '@/lib/appwrite';
-import { getErrorMessage } from '@/helpers/getErrorMessage';
 
 type TAuthContext = {
   user: Models.User | null;

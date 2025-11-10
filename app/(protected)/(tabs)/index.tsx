@@ -1,5 +1,5 @@
-import { View } from 'react-native';
 import { useAuth } from '@/lib/auth-context';
+import { View } from 'react-native';
 import { Button } from 'react-native-paper';
 
 export default function HomeScreen() {
