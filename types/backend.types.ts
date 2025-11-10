@@ -1,15 +1,18 @@
+import { Models } from 'react-native-appwrite';
 import { Frequency } from './backend-enums.types';
 
-export type Habit = {
-  $id: string;
+export type Habit = Models.Row & {
   userId: string;
   title: string;
   description: string;
   streakCount: number;
   frequency: Frequency;
   lastCompleted: string; // Date
-  $createdAt: string; // Date
-  $updatedAt: string | null; // Date
 };
+export type CreateHabit = Omit<Habit, keyof Models.Row>;
 
-export type CreateHabit = Omit<Habit, '$id' | '$createdAt' | '$updatedAt'>;
+export type HabitCompletion = Models.Row & {
+  habitId: string;
+  userId: string;
+};
+export type CreateHabitCompletion = Omit<HabitCompletion, keyof Models.Row>;

@@ -6,6 +6,7 @@ const schema = z.object({
   EXPO_PUBLIC_APPWRITE_PLATFORM: z.string(),
   EXPO_PUBLIC_APPWRITE_DB_ID: z.string(),
   EXPO_PUBLIC_APPWRITE_HABITS_TABLE_ID: z.string(),
+  EXPO_PUBLIC_APPWRITE_HABITS_COMPLETIONS_TABLE_ID: z.string(),
 });
 
 const safeParseEnvObj = schema.safeParse(process.env);
