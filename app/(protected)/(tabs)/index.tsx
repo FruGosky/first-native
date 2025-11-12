@@ -1,6 +1,4 @@
 import { api } from '@/api';
-import { useHabitsCompletionsIds } from '@/api/habits-completions/use-habits-completions-ids';
-import { deleteHabit } from '@/api/habits/delete-habit';
 import { getFirstLetterUppercase } from '@/helpers/getFirstLetterUppercase';
 import { useAuth } from '@/lib/auth-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -12,7 +10,7 @@ import { Button, Surface, Text } from 'react-native-paper';
 export default function HomeScreen() {
   const { user, logout } = useAuth();
   const habits = api.habits.useGet();
-  const todayCompletedHabitIds = useHabitsCompletionsIds();
+  const todayCompletedHabitIds = api.habitsCompletions.useGetIds();
   const swipeableRefs = useRef<Record<string, SwipeableMethods | null>>({});
 
   const handleCompleteHabit = async (habitId: string) => {
@@ -65,7 +63,7 @@ export default function HomeScreen() {
               renderRightActions={() => renderRightActions(habit.$id)}
               onSwipeableOpen={(direction) => {
                 if (direction === 'left') handleCompleteHabit(habit.$id);
-                if (direction === 'right') deleteHabit(habit.$id);
+                if (direction === 'right') api.habits.delete(habit.$id);
                 swipeableRefs.current[habit.$id]?.close();
               }}
             >
