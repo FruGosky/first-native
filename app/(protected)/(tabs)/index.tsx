@@ -1,139 +1,45 @@
-import { env } from '@/env';
+import { api } from '@/api';
+import { useHabitsCompletionsIds } from '@/api/habits-completions/use-habits-completions-ids';
+import { deleteHabit } from '@/api/habits/delete-habit';
 import { getErrorMessage } from '@/helpers/getErrorMessage';
 import { getFirstLetterUppercase } from '@/helpers/getFirstLetterUppercase';
-import { client, tablesTB } from '@/lib/appwrite';
 import { useAuth } from '@/lib/auth-context';
-import { CreateHabitCompletion, Habit, HabitCompletion } from '@/types/backend.types';
+import { Habit } from '@/types/backend.types';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useRef } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { ID, Query } from 'react-native-appwrite';
 import Swipeable, { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { Button, Surface, Text } from 'react-native-paper';
 
-const HABITS_CHANNEL = `databases.${env.EXPO_PUBLIC_APPWRITE_DB_ID}.tables.${env.EXPO_PUBLIC_APPWRITE_HABITS_TABLE_ID}.rows`;
-const HABITS_COMPLETION_CHANNEL = `databases.${env.EXPO_PUBLIC_APPWRITE_DB_ID}.tables.${env.EXPO_PUBLIC_APPWRITE_HABITS_COMPLETIONS_TABLE_ID}.rows`;
-const CREATE_EVENT = 'databases.*.tables.*.rows.*.create';
-const UPDATE_EVENT = 'databases.*.tables.*.rows.*.update';
-const DELETE_EVENT = 'databases.*.tables.*.rows.*.delete';
-
 export default function HomeScreen() {
   const { user, logout } = useAuth();
-  const [habits, setHabits] = useState<Habit[]>([]);
-  const [todayCompletedHabitIds, setTodayCompletedHabitIds] = useState<Set<string>>(new Set());
+  const habits = api.habits.useGet();
+  const todayCompletedHabitIds = useHabitsCompletionsIds();
 
   const swipeableRefs = useRef<Record<string, SwipeableMethods | null>>({});
-
-  const fetchHabits = useCallback(async () => {
-    try {
-      const response = await tablesTB.listRows<Habit>({
-        databaseId: env.EXPO_PUBLIC_APPWRITE_DB_ID,
-        tableId: env.EXPO_PUBLIC_APPWRITE_HABITS_TABLE_ID,
-        queries: [Query.equal('userId' satisfies keyof Habit, user?.$id ?? '')],
-      });
-      setHabits(response.rows);
-    } catch (error) {
-      const errorMessage = getErrorMessage(error);
-      console.error(errorMessage);
-    }
-  }, [user?.$id]);
-
-  const fetchTodayCompletions = useCallback(async () => {
-    try {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const response = await tablesTB.listRows<HabitCompletion>({
-        databaseId: env.EXPO_PUBLIC_APPWRITE_DB_ID,
-        tableId: env.EXPO_PUBLIC_APPWRITE_HABITS_COMPLETIONS_TABLE_ID,
-        queries: [
-          Query.equal('userId' satisfies keyof HabitCompletion, user?.$id ?? ''),
-          Query.greaterThanEqual('$createdAt' satisfies keyof HabitCompletion, today.toISOString()),
-        ],
-      });
-      const todayCompletions = response.rows;
-      setTodayCompletedHabitIds(new Set(todayCompletions.map((completion) => completion.habitId)));
-    } catch (error) {
-      const errorMessage = getErrorMessage(error);
-      console.error(errorMessage);
-    }
-  }, [user?.$id]);
-
-  useEffect(() => {
-    if (!user) return;
-
-    const habitsSubscription = client.subscribe(HABITS_CHANNEL, (response) => {
-      if (
-        response.events.includes(CREATE_EVENT) ||
-        response.events.includes(UPDATE_EVENT) ||
-        response.events.includes(DELETE_EVENT)
-      ) {
-        fetchHabits();
-      }
-    });
-
-    const habitsCompletionSubscription = client.subscribe(HABITS_COMPLETION_CHANNEL, (response) => {
-      if (response.events.includes(CREATE_EVENT)) {
-        fetchTodayCompletions();
-      }
-    });
-
-    fetchHabits();
-    fetchTodayCompletions();
-
-    return () => {
-      habitsSubscription();
-      habitsCompletionSubscription();
-    };
-  }, [fetchHabits, fetchTodayCompletions, user]);
-
-  const handleDeleteHabit = async (habitId: string) => {
-    try {
-      await tablesTB.deleteRow({
-        databaseId: env.EXPO_PUBLIC_APPWRITE_DB_ID,
-        tableId: env.EXPO_PUBLIC_APPWRITE_HABITS_TABLE_ID,
-        rowId: habitId,
-      });
-    } catch (error) {
-      const errorMessage = getErrorMessage(error);
-      console.error(errorMessage);
-    }
-  };
 
   const handleCompleteHabit = async (habitId: string) => {
     if (!user || todayCompletedHabitIds.has(habitId)) return;
     try {
-      await tablesTB.createRow({
-        databaseId: env.EXPO_PUBLIC_APPWRITE_DB_ID,
-        tableId: env.EXPO_PUBLIC_APPWRITE_HABITS_COMPLETIONS_TABLE_ID,
-        rowId: ID.unique(),
-        data: {
-          habitId,
-          userId: user.$id,
-        } satisfies CreateHabitCompletion,
-      });
+      await api.habitsCompletions.create(user.$id, habitId);
 
-      const habit = habits.find((habit) => habit.$id === habitId);
-      if (!habit) return;
+      const habitToUpdate = habits.find((habit) => habit.$id === habitId);
+      if (!habitToUpdate) return;
 
-      await tablesTB.updateRow({
-        databaseId: env.EXPO_PUBLIC_APPWRITE_DB_ID,
-        tableId: env.EXPO_PUBLIC_APPWRITE_HABITS_TABLE_ID,
-        rowId: habitId,
-        data: {
-          ...habit,
-          streakCount: habit.streakCount + 1,
-          lastCompleted: new Date().toISOString(),
-        } satisfies Habit,
-      });
+      const updatedHabit: Habit = {
+        ...habitToUpdate,
+        streakCount: habitToUpdate.streakCount + 1,
+        lastCompleted: new Date().toISOString(),
+      };
+
+      await api.habits.update(updatedHabit);
     } catch (error) {
       const errorMessage = getErrorMessage(error);
       console.error(errorMessage);
     }
   };
 
-  const isHabitCompleted = (habitId: string) => {
-    return todayCompletedHabitIds.has(habitId);
-  };
+  const isHabitCompleted = (habitId: string) => todayCompletedHabitIds.has(habitId);
 
   const renderLeftActions = () => (
     <View style={styles.swipeActionLeft}>
@@ -176,7 +82,7 @@ export default function HomeScreen() {
               renderRightActions={() => renderRightActions(habit.$id)}
               onSwipeableOpen={(direction) => {
                 if (direction === 'left') handleCompleteHabit(habit.$id);
-                if (direction === 'right') handleDeleteHabit(habit.$id);
+                if (direction === 'right') deleteHabit(habit.$id);
                 swipeableRefs.current[habit.$id]?.close();
               }}
             >
