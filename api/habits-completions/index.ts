@@ -1,10 +1,7 @@
-import { createHabitCompletion } from './create-habit-completions';
-import { fetchTodayCompletions } from './fetch-habits-completions';
-import { useHabitsCompletions, useTodayHabitsCompletionsIds } from './use-habits-completions';
+import { useHabitsCompletions } from './queries/use-habits-completions';
+import { useTodayHabitsCompletionsIds } from './queries/use-habits-completions-ids';
 
 export const habitsCompletions = {
-  get: fetchTodayCompletions,
   useGet: useHabitsCompletions,
   useGetIdsForToday: useTodayHabitsCompletionsIds,
-  create: createHabitCompletion,
 };

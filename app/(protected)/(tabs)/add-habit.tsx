@@ -1,15 +1,13 @@
+import { api } from '@/api';
 import { TextError } from '@/components/text-error';
-import { env } from '@/env';
 import { getErrorMessage } from '@/helpers/getErrorMessage';
 import { getFirstLetterUppercase } from '@/helpers/getFirstLetterUppercase';
-import { tablesTB } from '@/lib/appwrite';
 import { useAuth } from '@/lib/auth-context';
 import { FREQUENCIES, Frequency } from '@/types/backend-enums.types';
 import { CreateHabit } from '@/types/backend.types';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { ID } from 'react-native-appwrite';
 import { Button, SegmentedButtons, TextInput } from 'react-native-paper';
 
 export default function AddHabitScreen() {
@@ -19,28 +17,28 @@ export default function AddHabitScreen() {
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
   const route = useRouter();
+  const createHabit = api.habits.useCreate();
 
   const handleSubmit = async () => {
     if (!user) return;
 
+    const newHabit: CreateHabit = {
+      userId: user.$id,
+      title,
+      description,
+      frequency,
+    };
     try {
-      await tablesTB.createRow({
-        databaseId: env.EXPO_PUBLIC_APPWRITE_DB_ID,
-        tableId: env.EXPO_PUBLIC_APPWRITE_HABITS_TABLE_ID,
-        rowId: ID.unique(),
-        data: {
-          userId: user.$id,
-          title,
-          description,
-          frequency,
-          streakCount: 0,
-          lastCompleted: new Date().toISOString(),
-        } satisfies CreateHabit,
-      });
-      route.back();
+      await createHabit
+        .mutateAsync(newHabit)
+        .then(route.back)
+        .catch((error) => {
+          const errorMessage = getErrorMessage(error);
+          setError(errorMessage);
+        });
     } catch (error) {
       const errorMessage = getErrorMessage(error);
-      setError(errorMessage);
+      console.error(errorMessage);
     }
   };
 
@@ -70,7 +68,8 @@ export default function AddHabitScreen() {
           onValueChange={setFrequency}
         />
         <Button
-          disabled={!title || !description}
+          disabled={!title || !description || createHabit.isPending}
+          loading={createHabit.isPending}
           mode="contained"
           style={styles.addHabitButton}
           onPress={handleSubmit}

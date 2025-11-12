@@ -1,13 +1,11 @@
-import { completeHabit } from './complete-habit';
-import { deleteHabit } from './delete-habit';
-import { fetchHabits } from './fetch-habits';
-import { updateHabit } from './update-habit';
-import { useHabits } from './use-habits';
+import { useCompleteHabit } from './queries/use-complete-habit';
+import { useCreateHabit } from './queries/use-create-habit';
+import { useDeleteHabit } from './queries/use-delete-habit';
+import { useHabits } from './queries/use-habits';
 
 export const habits = {
-  get: fetchHabits,
   useGet: useHabits,
-  update: updateHabit,
-  complete: completeHabit,
-  delete: deleteHabit,
+  useCreate: useCreateHabit,
+  useComplete: useCompleteHabit,
+  useDelete: useDeleteHabit,
 };

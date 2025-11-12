@@ -7,9 +7,9 @@ export type Habit = Models.Row & {
   description: string;
   streakCount: number;
   frequency: Frequency;
-  lastCompleted: string; // Date
+  lastCompleted: string | null; // Date
 };
-export type CreateHabit = Omit<Habit, keyof Models.Row>;
+export type CreateHabit = Omit<Habit, keyof Models.Row | 'streakCount' | 'lastCompleted'>;
 
 export type HabitCompletion = Models.Row & {
   habitId: string;

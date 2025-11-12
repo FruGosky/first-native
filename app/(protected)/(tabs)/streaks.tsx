@@ -1,4 +1,5 @@
 import { api } from '@/api';
+import { useAuth } from '@/lib/auth-context';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { Card, Text } from 'react-native-paper';
 
@@ -11,8 +12,9 @@ type StreakData = {
 const ACCEPTED_STREAK_DIFF_IN_DAYS = 1.5;
 
 export default function StreaksScreen() {
-  const habits = api.habits.useGet();
-  const habitsCompletions = api.habitsCompletions.useGet();
+  const { user } = useAuth();
+  const { data: habits = [] } = api.habits.useGet(user?.$id || '');
+  const { data: habitsCompletions = [] } = api.habitsCompletions.useGet(user?.$id || '');
 
   const getStreakData = (habitId: string): StreakData => {
     const habitCompletions = habitsCompletions
