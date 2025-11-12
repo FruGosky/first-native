@@ -21,7 +21,6 @@ export default function HomeScreen() {
   const { user, logout } = useAuth();
   const [habits, setHabits] = useState<Habit[]>([]);
   const [todayCompletedHabitIds, setTodayCompletedHabitIds] = useState<Set<string>>(new Set());
-  console.log(todayCompletedHabitIds);
 
   const swipeableRefs = useRef<Record<string, SwipeableMethods | null>>({});
 
