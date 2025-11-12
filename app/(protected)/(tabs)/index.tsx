@@ -10,7 +10,7 @@ import { Button, Surface, Text } from 'react-native-paper';
 export default function HomeScreen() {
   const { user, logout } = useAuth();
   const habits = api.habits.useGet();
-  const todayCompletedHabitIds = api.habitsCompletions.useGetIds();
+  const todayCompletedHabitIds = api.habitsCompletions.useGetIdsForToday();
   const swipeableRefs = useRef<Record<string, SwipeableMethods | null>>({});
 
   const handleCompleteHabit = async (habitId: string) => {
