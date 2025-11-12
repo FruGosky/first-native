@@ -1,10 +1,8 @@
 import { api } from '@/api';
 import { useHabitsCompletionsIds } from '@/api/habits-completions/use-habits-completions-ids';
 import { deleteHabit } from '@/api/habits/delete-habit';
-import { getErrorMessage } from '@/helpers/getErrorMessage';
 import { getFirstLetterUppercase } from '@/helpers/getFirstLetterUppercase';
 import { useAuth } from '@/lib/auth-context';
-import { Habit } from '@/types/backend.types';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRef } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
@@ -15,28 +13,13 @@ export default function HomeScreen() {
   const { user, logout } = useAuth();
   const habits = api.habits.useGet();
   const todayCompletedHabitIds = useHabitsCompletionsIds();
-
   const swipeableRefs = useRef<Record<string, SwipeableMethods | null>>({});
 
   const handleCompleteHabit = async (habitId: string) => {
     if (!user || todayCompletedHabitIds.has(habitId)) return;
-    try {
-      await api.habitsCompletions.create(user.$id, habitId);
-
-      const habitToUpdate = habits.find((habit) => habit.$id === habitId);
-      if (!habitToUpdate) return;
-
-      const updatedHabit: Habit = {
-        ...habitToUpdate,
-        streakCount: habitToUpdate.streakCount + 1,
-        lastCompleted: new Date().toISOString(),
-      };
-
-      await api.habits.update(updatedHabit);
-    } catch (error) {
-      const errorMessage = getErrorMessage(error);
-      console.error(errorMessage);
-    }
+    const habitToUpdate = habits.find((habit) => habit.$id === habitId);
+    if (!habitToUpdate) return;
+    await api.habits.complete(user.$id, habitToUpdate);
   };
 
   const isHabitCompleted = (habitId: string) => todayCompletedHabitIds.has(habitId);
