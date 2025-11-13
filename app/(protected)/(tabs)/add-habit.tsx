@@ -3,81 +3,127 @@ import { TextError } from '@/components/text-error';
 import { getErrorMessage } from '@/helpers/getErrorMessage';
 import { getFirstLetterUppercase } from '@/helpers/getFirstLetterUppercase';
 import { useAuth } from '@/lib/auth-context';
-import { FREQUENCIES, Frequency } from '@/types/backend-enums.types';
+import { addHabitSchema } from '@/schemas/habit.schema';
+import { FREQUENCIES } from '@/types/backend-enums.types';
 import { CreateHabit } from '@/types/backend.types';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
 import { StyleSheet, View } from 'react-native';
-import { Button, SegmentedButtons, TextInput } from 'react-native-paper';
+import { Button, SegmentedButtons, Text, TextInput } from 'react-native-paper';
+import { z } from 'zod';
+
+const formSchema = addHabitSchema;
+type FormValues = z.infer<typeof addHabitSchema>;
 
 export default function AddHabitScreen() {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [frequency, setFrequency] = useState<Frequency>('weekly');
-  const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
   const route = useRouter();
   const createHabit = api.habits.useCreate();
+  const [apiError, setApiError] = useState<string | null>(null);
 
-  const handleSubmit = async () => {
+  const {
+    control,
+    handleSubmit,
+    formState: { isValid, errors: formErrors },
+  } = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      title: '',
+      description: '',
+      frequency: 'weekly',
+    },
+    mode: 'onSubmit',
+    reValidateMode: 'onChange',
+  });
+
+  const onSubmit = async (data: FormValues) => {
+    if (!isValid) return;
     if (!user) return;
+    setApiError(null);
 
     const newHabit: CreateHabit = {
       userId: user.$id,
-      title,
-      description,
-      frequency,
+      ...data,
     };
+
     try {
-      await createHabit
-        .mutateAsync(newHabit)
-        .then(route.back)
-        .catch((error) => {
-          const errorMessage = getErrorMessage(error);
-          setError(errorMessage);
-        });
-    } catch (error) {
-      const errorMessage = getErrorMessage(error);
-      console.error(errorMessage);
+      await createHabit.mutateAsync(newHabit);
+      route.back();
+    } catch (err) {
+      setApiError(getErrorMessage(err));
     }
   };
 
   return (
     <View style={styles.container}>
-      <TextInput
-        label="Title"
-        mode="outlined"
-        style={styles.input}
-        value={title}
-        onChangeText={setTitle}
+      <Controller
+        control={control}
+        name="title"
+        render={({ field: { onChange, value } }) => (
+          <>
+            <TextInput
+              error={!!formErrors.title}
+              label="Title"
+              mode="outlined"
+              style={styles.input}
+              value={value}
+              onChangeText={onChange}
+            />
+            {formErrors.title ? (
+              <Text style={styles.errorText}>{formErrors.title.message}</Text>
+            ) : null}
+          </>
+        )}
       />
-      <TextInput
-        label="Description"
-        mode="outlined"
-        style={styles.input}
-        value={description}
-        onChangeText={setDescription}
+
+      <Controller
+        control={control}
+        name="description"
+        render={({ field: { onChange, value } }) => (
+          <>
+            <TextInput
+              error={!!formErrors.description}
+              label="Description"
+              mode="outlined"
+              style={styles.input}
+              value={value}
+              onChangeText={onChange}
+            />
+            {formErrors.description ? (
+              <Text style={styles.errorText}>{formErrors.description.message}</Text>
+            ) : null}
+          </>
+        )}
       />
-      <View style={styles.frequenciesContainer}>
-        <SegmentedButtons
-          buttons={FREQUENCIES.map((freq) => ({
-            value: freq,
-            label: getFirstLetterUppercase(freq),
-          }))}
-          value={frequency}
-          onValueChange={setFrequency}
-        />
-        <Button
-          disabled={!title || !description || createHabit.isPending}
-          loading={createHabit.isPending}
-          mode="contained"
-          style={styles.addHabitButton}
-          onPress={handleSubmit}
-        >
-          Add Habit
-        </Button>
-        {error ? <TextError>{error}</TextError> : null}
-      </View>
+
+      <Controller
+        control={control}
+        name="frequency"
+        render={({ field: { onChange, value } }) => (
+          <SegmentedButtons
+            buttons={FREQUENCIES.map((freq) => ({
+              value: freq,
+              label: getFirstLetterUppercase(freq),
+            }))}
+            value={value}
+            onValueChange={onChange}
+          />
+        )}
+      />
+
+      <Button
+        disabled={createHabit.isPending}
+        loading={createHabit.isPending}
+        mode="contained"
+        style={styles.addHabitButton}
+        onPress={handleSubmit(onSubmit)}
+      >
+        Add Habit
+      </Button>
+
+      {apiError ? <TextError>{apiError}</TextError> : null}
     </View>
   );
 }
@@ -90,12 +136,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   input: {
-    marginBottom: 16,
+    marginBottom: 8,
   },
-  frequenciesContainer: {
-    marginBottom: 24,
+  errorText: {
+    color: '#d32f2f',
+    fontSize: 12,
+    marginBottom: 8,
+    marginLeft: 4,
   },
   addHabitButton: {
-    marginTop: 8,
+    marginTop: 16,
   },
 });

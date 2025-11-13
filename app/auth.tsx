@@ -1,54 +1,46 @@
 import { TextError } from '@/components/text-error';
 import { useAuth } from '@/lib/auth-context';
+import { authSchema } from '@/schemas/auth.schema';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
 import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
 import { Button, Text, TextInput } from 'react-native-paper';
+import { z } from 'zod';
+
+const formSchema = authSchema;
+type FormValues = z.infer<typeof authSchema>;
 
 export default function AuthScreen() {
   const { login, registerAndLogin } = useAuth();
   const router = useRouter();
-
   const [isSignUp, setIsSignUp] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [apiError, setApiError] = useState<string | null>(null);
 
-  const validateForm = () => {
-    if (!email || !password) {
-      setError('Please fill in all fields');
-      return false;
-    }
+  const {
+    control,
+    handleSubmit,
+    formState: { isValid, errors: formErrors },
+  } = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      email: '',
+      password: '',
+    },
+    mode: 'onSubmit',
+    reValidateMode: 'onChange',
+  });
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters');
-      return false;
-    }
+  const onSubmit = async ({ email, password }: FormValues) => {
+    if (!isValid) return;
+    setApiError(null);
+    const error = isSignUp
+      ? await registerAndLogin(email.trim(), password)
+      : await login(email.trim(), password);
 
-    setError(null);
-    return true;
-  };
-
-  const handleSign = async () => {
-    if (isSignUp) {
-      return await registerAndLogin(email, password);
-    } else {
-      return await login(email, password);
-    }
-  };
-
-  const handleAuth = async () => {
-    if (!validateForm()) return;
-    const error = await handleSign();
-    if (error) {
-      setError(error);
-      return;
-    }
+    if (error) return setApiError(error);
     router.replace('/');
-  };
-
-  const handleSwitchMode = () => {
-    setIsSignUp((prev) => !prev);
   };
 
   return (
@@ -58,35 +50,68 @@ export default function AuthScreen() {
     >
       <View style={style.content}>
         <Text style={style.title} variant="headlineMedium">
-          {isSignUp ? 'Create Account' : 'Welcome back!'}{' '}
+          {isSignUp ? 'Create Account' : 'Welcome back!'}
         </Text>
-        <TextInput
-          autoCapitalize="none"
-          keyboardType="email-address"
-          label="Email"
-          mode="outlined"
-          placeholder="example@gmail.com"
-          style={style.input}
-          value={email}
-          onChangeText={setEmail}
-        />
-        <TextInput
-          secureTextEntry
-          autoCapitalize="none"
-          label="Password"
-          mode="outlined"
-          placeholder="******"
-          style={style.input}
-          value={password}
-          onChangeText={setPassword}
+
+        {/* EMAIL */}
+        <Controller
+          control={control}
+          name="email"
+          render={({ field: { onChange, value } }) => (
+            <>
+              <TextInput
+                autoCapitalize="none"
+                error={!!formErrors.email}
+                keyboardType="email-address"
+                label="Email"
+                mode="outlined"
+                placeholder="example@gmail.com"
+                style={style.input}
+                value={value}
+                onChangeText={onChange}
+              />
+              {formErrors.email?.message ? <TextError>{formErrors.email.message}</TextError> : null}
+            </>
+          )}
         />
 
-        {error ? <TextError>{error}</TextError> : null}
+        {/* PASSWORD */}
+        <Controller
+          control={control}
+          name="password"
+          render={({ field: { onChange, value } }) => (
+            <>
+              <TextInput
+                secureTextEntry
+                autoCapitalize="none"
+                error={!!formErrors.password}
+                label="Password"
+                mode="outlined"
+                placeholder="******"
+                style={style.input}
+                value={value}
+                onChangeText={onChange}
+              />
+              {formErrors.password?.message ? (
+                <TextError>{formErrors.password.message}</TextError>
+              ) : null}
+            </>
+          )}
+        />
 
-        <Button mode="contained" style={style.signButton} onPress={handleAuth}>
+        {/* BACKEND ERROR */}
+        {apiError ? <TextError>{apiError}</TextError> : null}
+
+        {/* BUTTONS */}
+        <Button mode="contained" style={style.signButton} onPress={handleSubmit(onSubmit)}>
           {isSignUp ? 'Sign Up' : 'Sign In'}
         </Button>
-        <Button mode="text" style={style.switchModeButton} onPress={handleSwitchMode}>
+
+        <Button
+          mode="text"
+          style={style.switchModeButton}
+          onPress={() => setIsSignUp((prev) => !prev)}
+        >
           {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
         </Button>
       </View>
@@ -109,7 +134,7 @@ const style = StyleSheet.create({
     marginBottom: 24,
   },
   input: {
-    marginBottom: 16,
+    marginBottom: 8,
   },
   signButton: {
     marginTop: 8,
